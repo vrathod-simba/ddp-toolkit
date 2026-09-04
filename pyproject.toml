@@ -1,0 +1,60 @@
+[project]
+name            = "template-modern-python"
+version         = "0.1.0"
+description     = "Add your description here"
+readme          = "README.md"
+requires-python = ">=3.12"
+license         = "MIT"
+license-files   = [ "LICENSE" ]
+keywords        = [ "python", "template", "uv" ]
+classifiers     = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies    = []
+
+[[project.authors]]
+name            = "Vipul Rathod"
+email           = "vrathod.professional@gmail.com"
+
+# [project.scripts]
+# <package> = "<package>.main:main"
+
+[project.urls]
+Homepage        = "https://github.com/vrathodev/template-modern-python"
+Repository      = "https://github.com/vrathodev/template-modern-python"
+Issues          = "https://github.com/vrathodev/template-modern-python/issues"
+Documentation   = "https://github.com/vrathodev/template-modern-python#readme"
+Changelog       = "https://github.com/vrathodev/template-modern-python/releases"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[tool.uv]
+required-version    = ">=0.5"
+default-groups      = [ "dev" ]
+package             = true
+
+# [tool.uv.sources]
+# Pin git or path dependencies here, e.g.
+# my-lib = { git = "https://github.com/org/my-lib", tag = "v1.2.3" }
+
+[tool.hatch.build.targets.wheel]
+packages        = [ "src/<package>" ]
+
+[build-system]
+requires        = [ "hatchling" ]
+build-backend   = "hatchling.build"
+
