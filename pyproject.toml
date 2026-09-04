@@ -1,15 +1,14 @@
 [project]
-name            = "template-modern-python"
+name            = "ddp-toolkit"
 version         = "0.1.0"
 description     = "Add your description here"
 readme          = "README.md"
 requires-python = ">=3.12"
 license         = "MIT"
 license-files   = [ "LICENSE" ]
-keywords        = [ "python", "template", "uv" ]
+keywords        = [ "python", "ddp", "touchstone", "perftest" ]
 classifiers     = [
     "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -22,17 +21,17 @@ dependencies    = []
 
 [[project.authors]]
 name            = "Vipul Rathod"
-email           = "vrathod.professional@gmail.com"
+email           = "vipul.rathod@insightsoftware.com"
 
 # [project.scripts]
 # <package> = "<package>.main:main"
 
 [project.urls]
-Homepage        = "https://github.com/vrathodev/template-modern-python"
-Repository      = "https://github.com/vrathodev/template-modern-python"
-Issues          = "https://github.com/vrathodev/template-modern-python/issues"
-Documentation   = "https://github.com/vrathodev/template-modern-python#readme"
-Changelog       = "https://github.com/vrathodev/template-modern-python/releases"
+Homepage        = "https://github.com/vrathod-simba/ddp-toolkit"
+Repository      = "https://github.com/vrathod-simba/ddp-toolkit"
+Issues          = "https://github.com/vrathod-simba/ddp-toolkit/issues"
+Documentation   = "https://github.com/vrathod-simba/ddp-toolkit#readme"
+Changelog       = "https://github.com/vrathod-simba/ddp-toolkit/releases"
 
 [dependency-groups]
 dev = [
