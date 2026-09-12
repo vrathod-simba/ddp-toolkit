@@ -1,5 +1,5 @@
 def main():
-    print("Hello from ts-test-report-gen!")
+    print("Hello from touchstone-testreport!")
 
 
 if __name__ == "__main__":

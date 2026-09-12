@@ -1,5 +1,5 @@
 [project]
-name            = "ts-test-report-gen"
+name            = "touchstone-testreport"
 version         = "0.1.0"
 description     = "Add your description here"
 readme          = "README.md"
@@ -22,7 +22,7 @@ name            = "Vipul Rathod"
 email           = "vipul.rathod@insightsoftware.com"
 
 [project.scripts]
-ts-test-report-gen = "ts_test_report_gen.main:main"
+touchstone-testreport = "touchstone_testreport.main:main"
 
 [project.urls]
 Homepage        = "https://github.com/vrathod-simba/ddp-toolkit"
@@ -41,7 +41,7 @@ package             = true
 # my-lib = { git = "https://github.com/org/my-lib", tag = "v1.2.3" }
 
 [tool.hatch.build.targets.wheel]
-packages        = [ "src/ts_test_report_gen" ]
+packages        = [ "src/touchstone_testreport" ]
 
 [build-system]
 requires        = [ "hatchling" ]
