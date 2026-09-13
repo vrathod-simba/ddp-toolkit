@@ -128,9 +128,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        test_output_dir: str = r'C:\Users\vipul.rathod\Downloads\TS-Logs\log\test_output'
-        # test_output_dir: str = r'C:\Users\vipul.rathod\Downloads\Touchstone--w2016--vs2022--64\Logs'
-        main(args.test_output_dir or test_output_dir)
-        # main(args.test_output_dir)
+        main(args.test_output_dir)
     except Exception as error:
         print(error)
