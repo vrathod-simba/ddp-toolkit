@@ -216,7 +216,7 @@
             <label for="suiteSelect" class="ts-suite-picker-label">Test Suite</label>
             <select id="suiteSelect" class="form-select ts-suite-select w-100">
                 {% for suite in artifact_suites %}
-                <option value="ts-suite-panel-{{ loop.index }}">{{ suite.name }} ({{ suite.artifacts | length }})</option>
+                <option value="ts-suite-panel-{{ loop.index }}">{{ suite.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -225,10 +225,10 @@
         <div class="ts-artifact-panels">
             {% for suite in artifact_suites %}
             <div class="ts-artifact-panel{{ '' if loop.first else ' d-none' }}" id="ts-suite-panel-{{ loop.index }}">
-                <div class="row g-4">
+                <div class="row">
 
                     <!-- Left: suite insights link + result breakdown pie chart -->
-                    <div class="col-12 col-lg-5">
+                    <div class="col-12 col-md-6">
                         {% if suite.url %}
                         <a href="{{ suite.url }}" class="ts-link">
                             <i class="bi bi-graph-up-arrow"></i>
@@ -278,7 +278,7 @@
                     </div>
 
                     <!-- Right: test artifact links -->
-                    <div class="col-12 col-lg-7">
+                    <div class="col-12 col-md-6">
                         <div class="list-group ts-list-group">
                             {% for artifact in suite.artifacts %}
                             <a href="{{ artifact.href }}"

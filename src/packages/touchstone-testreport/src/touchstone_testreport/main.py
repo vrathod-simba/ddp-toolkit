@@ -88,7 +88,7 @@ def main(in_test_output_dir: str):
     for name, suite in suites.items():
         artifact: dict[str, Any] = {
             'name'         : name.upper(),
-            'url'          : str((template.output_dir / suite.name.upper()).with_suffix('.html').absolute()),
+            'url'          : f'{suite.name}.html',
             'result_counts': TestCaseResult.to_normalized(suite.test_results),
             'artifacts'    : list()
         }
@@ -99,7 +99,7 @@ def main(in_test_output_dir: str):
                 {
                     'label'   : f'{label.capitalize()} ({file_path.suffix.upper()})',
                     'filename': file_path.name,
-                    'href'    : file_path.as_posix(),
+                    'href'    : f'../{file_path.name}',
                 }
             )
         artifact_suites.append(artifact)
@@ -109,7 +109,7 @@ def main(in_test_output_dir: str):
         in_out_filename='home.html',
         exec_time=exec_info.datetime,
         ts_ver=exec_info.ts_ver,
-        pipeline_url=os.getenv('PIPELINE_URL', ''),
+        pipeline_url=os.getenv('BUILD_URL', ''),
         artifact_suites=artifact_suites
     )
 

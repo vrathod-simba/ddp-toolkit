@@ -39,8 +39,12 @@
 {% endblock %}
 
 {% block extra_styles %}
-    /* ---------- KPI Cards ---------- */
+    /* ---------- KPI Cards (thin strip, similar height to the breadcrumb bar) ---------- */
     .ts-metric-card {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.45rem 0.85rem;
         transition: transform 0.15s ease, border-color 0.15s ease;
     }
 
@@ -50,29 +54,29 @@
     }
 
     .ts-metric-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.65rem;
+        width: 1.85rem;
+        height: 1.85rem;
+        border-radius: 0.5rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        font-size: 0.95rem;
         flex-shrink: 0;
     }
 
     .ts-metric-value {
-        font-size: 2rem;
+        font-size: 0.95rem;
         font-weight: 800;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
         line-height: 1;
         font-family: var(--ts-font-mono);
     }
 
     .ts-metric-label {
         color: var(--ts-text-muted);
-        font-size: 0.78rem;
+        font-size: 0.68rem;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.05em;
         font-weight: 600;
     }
 
@@ -152,20 +156,8 @@
 
     /* ---------- Catalog Toolbar ---------- */
     .ts-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
         padding: 1rem 1.25rem;
         border-bottom: 1px solid var(--ts-glass-border);
-    }
-
-    .ts-toolbar-controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.6rem;
     }
 
     .ts-toolbar-input,
@@ -175,6 +167,7 @@
         color: var(--ts-text-primary);
         color-scheme: dark;
         font-size: 0.82rem;
+        width: 100%;
     }
 
     .ts-toolbar-input:focus,
@@ -186,13 +179,9 @@
     }
 
     body.light-mode-active .ts-toolbar-input,
-    body.light-mode-active .ts-toolbar-select {
+    body.light-mode-active .ts-toolbar-select,
+    body.light-mode-active .ts-page-size-input {
         color-scheme: light;
-    }
-
-    .ts-toolbar-input {
-        width: 260px;
-        max-width: 100%;
     }
 
     .ts-columns-menu {
@@ -206,7 +195,9 @@
         font-size: 0.82rem;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.4rem;
+        width: 100%;
     }
 
     .ts-columns-btn:hover {
@@ -257,16 +248,33 @@
     }
 
     .ts-table {
+        /* Override Bootstrap's own table theming variables at the source - the .table component
+           reads these internally, so setting them here is what actually fixes cells rendering
+           with Bootstrap's light-mode default (white bg / dark text) instead of our glass theme. */
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--ts-text-primary);
+        --bs-table-striped-bg: transparent;
+        --bs-table-striped-color: var(--ts-text-primary);
+        --bs-table-active-bg: var(--ts-glow-a);
+        --bs-table-active-color: var(--ts-text-primary);
+        --bs-table-hover-bg: var(--ts-glow-a);
+        --bs-table-hover-color: var(--ts-text-primary);
+        --bs-table-border-color: var(--ts-glass-border);
         margin-bottom: 0;
         color: var(--ts-text-primary);
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+    }
+
+    .ts-table th,
+    .ts-table td {
+        padding: 0.35rem 0.65rem;
     }
 
     .ts-table thead th {
         background-color: var(--ts-glass-bg-strong);
         border-bottom: 1px solid var(--ts-glass-border);
         color: var(--ts-text-muted);
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         font-weight: 700;
@@ -374,6 +382,29 @@
         cursor: not-allowed;
     }
 
+    .ts-page-size-label {
+        font-size: 0.78rem;
+        color: var(--ts-text-muted);
+        white-space: nowrap;
+    }
+
+    .ts-page-size-input {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-primary);
+        color-scheme: dark;
+        font-size: 0.8rem;
+        width: 4.5rem;
+        text-align: center;
+    }
+
+    .ts-page-size-input:focus {
+        border-color: var(--ts-accent);
+        box-shadow: 0 0 0 0.2rem var(--ts-glow-a);
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-text-primary);
+    }
+
     .ts-empty-state {
         padding: 2.5rem;
         text-align: center;
@@ -384,58 +415,50 @@
 {% block content %}
 
     <!-- ============ KPI CARDS ============ -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+    <div class="row g-3 mb-2">
+        <div class="col-12 col-sm-3 col-xl-3">
+            <div class="ts-surface ts-metric-card">
                 <div class="ts-metric-icon ts-icon-total">
                     <i class="bi bi-collection"></i>
                 </div>
-                <div>
-                    <div class="ts-metric-value">{{ total_cases | default(0) }}</div>
-                    <div class="ts-metric-label">Total Cases</div>
-                </div>
+                <span class="ts-metric-value">{{ total_cases | default(0) }}</span>
+                <span class="ts-metric-label">Total Cases</span>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+        <div class="col-12 col-sm-3 col-xl-3">
+            <div class="ts-surface ts-metric-card">
                 <div class="ts-metric-icon ts-icon-succeed">
                     <i class="bi bi-check-circle"></i>
                 </div>
-                <div>
-                    <div class="ts-metric-value">{{ succeed_count | default(0) }}</div>
-                    <div class="ts-metric-label">Succeed</div>
-                </div>
+                <span class="ts-metric-value">{{ succeed_count | default(0) }}</span>
+                <span class="ts-metric-label">Succeed</span>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+        <div class="col-12 col-sm-3 col-xl-3">
+            <div class="ts-surface ts-metric-card">
                 <div class="ts-metric-icon ts-icon-failed">
                     <i class="bi bi-x-circle"></i>
                 </div>
-                <div>
-                    <div class="ts-metric-value">{{ failed_count | default(0) }}</div>
-                    <div class="ts-metric-label">Failed</div>
-                </div>
+                <span class="ts-metric-value">{{ failed_count | default(0) }}</span>
+                <span class="ts-metric-label">Failed</span>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+        <div class="col-12 col-sm-3 col-xl-3">
+            <div class="ts-surface ts-metric-card">
                 <div class="ts-metric-icon ts-icon-excluded">
                     <i class="bi bi-dash-circle"></i>
                 </div>
-                <div>
-                    <div class="ts-metric-value">{{ excluded_count | default(0) }}</div>
-                    <div class="ts-metric-label">Excluded</div>
-                </div>
+                <span class="ts-metric-value">{{ excluded_count | default(0) }}</span>
+                <span class="ts-metric-label">Excluded</span>
             </div>
         </div>
     </div>
 
     <!-- ============ COVERAGE BAR CHART ============ -->
-    <div class="ts-surface p-4 mb-4">
+    <!-- <div class="ts-surface p-4 mb-4">
         <h2 class="ts-section-title" style="font-size: 1.1rem; font-weight: 700; margin: 0;">Cross-Module Functional Coverage Matrix</h2>
         <p class="ts-section-subtitle" style="font-size: 0.8rem; color: var(--ts-text-muted); margin: 0.3rem 0 1.25rem;">
             Succeed / failed / excluded distribution per test set.
@@ -473,24 +496,28 @@
             <button type="button" id="loadMoreTestsets" class="ts-pagination-btn">Load more test sets</button>
         </div>
         {% endif %}
-    </div>
+    </div> -->
 
     <!-- ============ INTERACTIVE CATALOG ============ -->
     <div class="ts-table-wrapper">
         <div class="ts-toolbar">
-            <div>
-                <h2 class="ts-section-title" style="font-size: 1.05rem; font-weight: 700; margin: 0;">Interactive Execution Catalog</h2>
-                <p class="ts-section-subtitle" style="font-size: 0.78rem; color: var(--ts-text-muted); margin: 0.25rem 0 0;">Sort, filter, and isolate individual test cases.</p>
-            </div>
-            <div class="ts-toolbar-controls">
-                <input type="text" id="globalSearch" class="form-control ts-toolbar-input" placeholder="Filter by case name or test set...">
-                <select id="statusFilter" class="form-select ts-toolbar-select">
-                    <option value="ALL">All Outcomes</option>
-                    <option value="SUCCEED">Succeed</option>
-                    <option value="FAILED">Failed</option>
-                    <option value="EXCLUDED">Excluded</option>
-                </select>
-                <div class="ts-columns-menu">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-md-6">
+                    <h2 class="ts-section-title" style="font-size: 1.05rem; font-weight: 700; margin: 0;">Interactive Execution Catalog</h2>
+                    <p class="ts-section-subtitle" style="font-size: 0.78rem; color: var(--ts-text-muted); margin: 0.25rem 0 0;">Sort, filter, and isolate individual test cases.</p>
+                </div>
+                <div class="col-6 col-md-2">
+                    <input type="text" id="globalSearch" class="form-control ts-toolbar-input" placeholder="Filter by case name or test set...">
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="statusFilter" class="form-select ts-toolbar-select">
+                        <option value="ALL">All Outcomes</option>
+                        <option value="SUCCEED">Succeed</option>
+                        <option value="FAILED">Failed</option>
+                        <option value="EXCLUDED">Excluded</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2 ts-columns-menu">
                     <button type="button" id="columnsBtn" class="ts-pagination-btn ts-columns-btn">
                         <i class="bi bi-layout-three-columns"></i> Columns
                     </button>
@@ -523,6 +550,10 @@
         </div>
 
         <div class="ts-pagination-bar">
+            <div class="d-flex align-items-center gap-2">
+                <label for="pageSizeInput" class="ts-page-size-label mb-0">Rows per page</label>
+                <input type="number" id="pageSizeInput" class="ts-page-size-input" min="5" max="500" step="5" value="10">
+            </div>
             <span id="rowCounter">Showing 0 of 0 entries</span>
             <div class="d-flex gap-2">
                 <button type="button" id="prevPageBtn" class="ts-pagination-btn">Previous</button>
@@ -546,8 +577,9 @@
             const rowCounter = document.getElementById('rowCounter');
             const prevPageBtn = document.getElementById('prevPageBtn');
             const nextPageBtn = document.getElementById('nextPageBtn');
-            const pageSize = 25;
+            const pageSizeInput = document.getElementById('pageSizeInput');
 
+            let pageSize = parseInt(pageSizeInput.value, 10) || 10;
             let filtered = TS_DATASET.slice();
             let currentPage = 0;
             let sortField = 'id';
@@ -653,6 +685,15 @@
 
             globalSearch.addEventListener('input', applyFilters);
             statusFilter.addEventListener('change', applyFilters);
+
+            pageSizeInput.addEventListener('input', function () {
+                const value = parseInt(pageSizeInput.value, 10);
+                if (!isNaN(value) && value > 0) {
+                    pageSize = value;
+                    currentPage = 0;
+                    renderTable();
+                }
+            });
 
             prevPageBtn.addEventListener('click', function () {
                 if (currentPage > 0) {
