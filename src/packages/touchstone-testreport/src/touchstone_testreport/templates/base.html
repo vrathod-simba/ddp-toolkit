@@ -37,6 +37,13 @@
             --ts-success: #34d399;
             --ts-danger: #f87171;
             --ts-warning: #fbbf24;
+
+            /* Test-result chart family: blue/indigo/cyan/slate only - stays in the page's own color family */
+            --ts-result-succeed: hsl(217, 91%, 63%);
+            --ts-result-failed: hsl(238, 62%, 58%);
+            --ts-result-excluded: hsl(196, 82%, 58%);
+            --ts-result-other: hsl(220, 14%, 55%);
+
             --ts-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --ts-font-mono: Consolas, "SFMono-Regular", "Courier New", monospace;
         }
@@ -250,6 +257,50 @@
             box-shadow: var(--ts-glass-shadow);
         }
 
+        /* ---------- Reusable Link Styles (Bootstrap-based, shared across pages) ---------- */
+        .ts-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--ts-accent-tint);
+            font-weight: 600;
+            font-size: 0.88rem;
+            text-decoration: none;
+        }
+
+        .ts-link:hover {
+            color: var(--ts-accent);
+            text-decoration: underline;
+        }
+
+        .ts-link i {
+            transition: transform 0.15s ease;
+        }
+
+        .ts-link:hover i.bi-arrow-right {
+            transform: translateX(3px);
+        }
+
+        .ts-list-group {
+            border-radius: 0.65rem;
+            overflow: hidden;
+        }
+
+        .ts-list-group .list-group-item {
+            background: var(--ts-glass-bg);
+            border-color: var(--ts-glass-border);
+            color: var(--ts-text-primary);
+            padding: 0.65rem 0.9rem;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .ts-list-group .list-group-item-action:hover,
+        .ts-list-group .list-group-item-action:focus {
+            background: var(--ts-glow-a);
+            color: var(--ts-text-primary);
+            z-index: 1;
+        }
+
         /* ---------- Footer ---------- */
         .ts-footer {
             background: var(--ts-glass-bg);
@@ -330,6 +381,11 @@
             --ts-warning: #d97706;
             --ts-glow-a: hsla(222, 68%, 45%, 0.10);
             --ts-glow-b: hsla(222, 68%, 40%, 0.08);
+
+            --ts-result-succeed: hsl(217, 85%, 50%);
+            --ts-result-failed: hsl(238, 55%, 46%);
+            --ts-result-excluded: hsl(196, 78%, 40%);
+            --ts-result-other: hsl(220, 12%, 42%);
         }
 
         body.light-mode-active .ts-icon-btn,
@@ -337,9 +393,7 @@
             color: var(--ts-text-primary);
         }
         
-        { % block extra_styles % }
-
-        { % endblock % }
+        {% block extra_styles %}{% endblock %}
     </style>
 </head>
 
@@ -408,7 +462,7 @@
                 &copy; 2026 DDP Toolkit - Touchstone Test Report
             </div>
             <div>
-                <a href="#" title="Local Documentation">
+                <a href="https://github.com/vrathod-simba/ddp-toolkit" title="Local Documentation">
                     <i class="bi bi-github"></i> GitHub
                 </a>
                 <!-- <a href="#" id="debugLogToggle" title="Toggle Debug Log Overview">

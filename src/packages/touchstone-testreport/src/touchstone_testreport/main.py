@@ -48,33 +48,50 @@ def main(in_test_output_dir: str):
             continue
 
         # 3. Generate Test reports
-        count_excluded: int = test_suite.test_results[TestCaseResult.EXCLUDED] + test_suite.test_results[
-            TestCaseResult.SUSPENDED]
-        rate_excluded: float = (count_excluded / test_suite.total_cases_count) * 100
-        count_success: int = test_suite.test_results[TestCaseResult.SUCCEED] + test_suite.test_results[
-            TestCaseResult.RESULT_IGNORED]
-        rate_success: float = (count_success / test_suite.total_cases_count) * 100
+        normalized = TestCaseResult.to_normalized(test_suite.test_results)
+        cases: list[dict[str, Any]] = []
+        test_set_results: list[dict[str, Any]] = []
+        for ident, test_set in test_suite.test_sets.items():
+            test_set_result: dict[str, Any] = {'name': test_set.name.upper()}
+            test_set_result.update(TestCaseResult.to_normalized(test_set.test_results))
+            test_set_results.append(test_set_result)
+
+            for case in test_set.test_cases:
+                case: dict[str, Any] = {
+                    'id'         : case.id,
+                    'test_set'   : test_set.name.upper(),
+                    'name'       : case.internal_id,
+                    'result'     : case.result.name,
+                    'description': case.description,
+                    'elapse_ms'  : case.elapsed_time,
+                    'failure_url': f'../failures/{test_suite.name}--{test_set.name.upper()}--{case.internal_id.upper()}--'
+                                   f'{case.id}.txt'
+                }
+                cases.append(case)
 
         template.to_html(
-            in_template_name='report_template.html',
+            in_template_name='testsuite.html',
             in_out_filename=f'{test_suite.name}.html',
-            suite_name=test_suite.name,
-            touchstone_v=exec_info.ts_ver,
-            execution_date=exec_info.datetime,
+            suite_name=test_suite.name.upper(),
+            exec_time=exec_info.datetime,
+            ts_ver=exec_info.ts_ver,
+            pipeline_url=os.getenv('PIPELINE_URL', ''),
             total_cases=test_suite.total_cases_count,
-            success_cases=str(count_success),
-            success_rate=f'{rate_success:.2f}',
-            excluded_cases=str(count_excluded),
-            skipped_rate=f'{rate_excluded:.2f}',
-            pipeline_overhead='',
+            succeed_count=normalized[TestCaseResult.SUCCEED.name],
+            failed_count=normalized[TestCaseResult.FAILED.name],
+            excluded_count=normalized[TestCaseResult.EXCLUDED.name],
+            testset_breakdown=test_set_results,
+            test_cases=cases
         )
 
     artifact_suites: list = list()
     for name, suite in suites.items():
         artifact: dict[str, Any] = {
-            'name': name.upper(),
+            'name'         : name.upper(),
+            'url'          : str((template.output_dir / suite.name.upper()).with_suffix('.html').absolute()),
+            'result_counts': TestCaseResult.to_normalized(suite.test_results),
+            'artifacts'    : list()
         }
-        artifact['artifacts'] = list()
         for file_path in test_output_dir.glob(f'*{suite.name}*'):
             file_path: Path = file_path.resolve().absolute()
             label: str = file_path.name.replace(name, '').replace('_', ' ').replace(file_path.suffix, '').strip()

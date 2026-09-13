@@ -48,6 +48,25 @@ class TestCaseResult(Enum):
         """
         return cls(cls._member_map_.get(str(in_value).strip().upper(), cls.UNKNOWN))
 
+    @classmethod
+    def to_normalized(cls, in_results: dict[Self, int]) -> dict[str, int]:
+        normalized: dict[str, int] = {
+            TestCaseResult.FAILED.name  : 0,
+            TestCaseResult.SUCCEED.name : 0,
+            TestCaseResult.EXCLUDED.name: 0,
+            'OTHER'                     : 0
+        }
+        for result, count in in_results.items():
+            if result.is_failure:
+                normalized[TestCaseResult.FAILED.name] += count
+            elif result.is_success:
+                normalized[TestCaseResult.SUCCEED.name] += count
+            elif result == TestCaseResult.EXCLUDED:
+                normalized[TestCaseResult.EXCLUDED.name] += count
+            else:
+                normalized['OTHER'] += count
+        return normalized
+
 
 class BaseTestEntityModel(BaseModel):
     """

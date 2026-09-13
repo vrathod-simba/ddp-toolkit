@@ -1,0 +1,742 @@
+{% extends "base.html" %}
+
+{#
+    Expected context shape:
+
+    suite_name = "API_ALL_TESTSET"
+
+    total_cases = 10000
+    succeed_count = 8900
+    failed_count = 950
+    excluded_count = 150
+
+    # Per test-set breakdown, feeds the coverage bar chart. Order is preserved as given.
+    testset_breakdown = [
+        {"name": "CONNECTIONREUSE", "succeed": 3, "failed": 1, "excluded": 2},
+        ...
+    ]
+
+    # Full row-level dataset, hydrated client-side for sort/filter/pagination (kept out of the
+    # server-rendered DOM so a 10k+ row suite stays fast to load).
+    test_cases = [
+        {
+            "id": 1,
+            "test_set": "CONNECTIONREUSE",
+            "name": "T-FULL-API-11.2",
+            "result": "SUCCEED",              # SUCCEED | FAILED | EXCLUDED
+            "description": "SQLConnect on same handle after SQLDisconnect.",
+            "elapse_ms": 12,
+            "failure_url": null                 # only meaningful when result == FAILED
+        },
+        ...
+    ]
+#}
+
+{% block title %}Touchstone Test Report - {{ suite_name }} Insights{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="report.html"><i class="bi bi-house-door-fill"></i> Home</a></li>
+<li class="breadcrumb-item"><a href="artifact_explorer.html">Artifact Explorer</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ suite_name }}</li>
+{% endblock %}
+
+{% block extra_styles %}
+    /* ---------- KPI Cards ---------- */
+    .ts-metric-card {
+        transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .ts-metric-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--ts-glass-border-strong);
+    }
+
+    .ts-metric-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.65rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .ts-metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        font-family: var(--ts-font-mono);
+    }
+
+    .ts-metric-label {
+        color: var(--ts-text-muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 600;
+    }
+
+    .ts-icon-total { background-color: hsla(222, 68%, 55%, 0.15); color: var(--ts-accent); }
+    .ts-icon-succeed { background-color: hsla(217, 91%, 63%, 0.15); color: var(--ts-result-succeed); }
+    .ts-icon-failed { background-color: hsla(238, 62%, 58%, 0.15); color: var(--ts-result-failed); }
+    .ts-icon-excluded { background-color: hsla(196, 82%, 58%, 0.15); color: var(--ts-result-excluded); }
+
+    /* ---------- Coverage Bar Chart ---------- */
+    .ts-coverage-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .ts-legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--ts-text-muted);
+    }
+
+    .ts-legend-marker {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .ts-coverage-row-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .ts-coverage-row.d-none {
+        display: none;
+    }
+
+    .ts-coverage-row-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .ts-coverage-row-header strong {
+        color: var(--ts-text-primary);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .ts-coverage-row-stats {
+        color: var(--ts-text-muted);
+        white-space: nowrap;
+        font-family: var(--ts-font-mono);
+        font-size: 0.72rem;
+    }
+
+    .ts-coverage-bar {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        height: 10px;
+    }
+
+    .ts-coverage-bar span {
+        flex-shrink: 0;
+        min-width: 8px;
+        height: 100%;
+        border-radius: 999px;
+    }
+
+    /* ---------- Catalog Toolbar ---------- */
+    .ts-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--ts-glass-border);
+    }
+
+    .ts-toolbar-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .ts-toolbar-input,
+    .ts-toolbar-select {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-primary);
+        color-scheme: dark;
+        font-size: 0.82rem;
+    }
+
+    .ts-toolbar-input:focus,
+    .ts-toolbar-select:focus {
+        border-color: var(--ts-accent);
+        box-shadow: 0 0 0 0.2rem var(--ts-glow-a);
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-text-primary);
+    }
+
+    body.light-mode-active .ts-toolbar-input,
+    body.light-mode-active .ts-toolbar-select {
+        color-scheme: light;
+    }
+
+    .ts-toolbar-input {
+        width: 260px;
+        max-width: 100%;
+    }
+
+    .ts-columns-menu {
+        position: relative;
+    }
+
+    .ts-columns-btn {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-muted);
+        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .ts-columns-btn:hover {
+        color: var(--ts-text-primary);
+        border-color: var(--ts-accent);
+    }
+
+    .ts-columns-panel {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.4rem);
+        z-index: 5;
+        min-width: 180px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        background: var(--ts-bg-canvas);
+        border: 1px solid var(--ts-glass-border);
+        border-radius: 0.6rem;
+        box-shadow: var(--ts-glass-shadow);
+    }
+
+    .ts-columns-panel label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        border-radius: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--ts-text-muted);
+    }
+
+    .ts-columns-panel label:hover {
+        background: var(--ts-glow-a);
+        color: var(--ts-text-primary);
+    }
+
+    /* ---------- Data Table ---------- */
+    .ts-table-wrapper {
+        background: var(--ts-glass-bg);
+        border: 1px solid var(--ts-glass-border);
+        border-radius: 0.9rem;
+        -webkit-backdrop-filter: var(--ts-blur);
+        backdrop-filter: var(--ts-blur);
+        box-shadow: var(--ts-glass-shadow);
+        overflow: hidden;
+    }
+
+    .ts-table {
+        margin-bottom: 0;
+        color: var(--ts-text-primary);
+        font-size: 0.85rem;
+    }
+
+    .ts-table thead th {
+        background-color: var(--ts-glass-bg-strong);
+        border-bottom: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .ts-table thead th:hover {
+        color: var(--ts-text-primary);
+    }
+
+    .ts-table thead th .bi {
+        font-size: 0.7rem;
+        margin-left: 0.25rem;
+        color: var(--ts-glass-border-strong);
+    }
+
+    .ts-table thead th.ts-sort-active .bi {
+        color: var(--ts-accent-tint);
+    }
+
+    .ts-table td {
+        border-color: var(--ts-glass-border);
+        vertical-align: middle;
+        max-width: 320px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ts-table tbody tr:hover {
+        background-color: var(--ts-glow-a);
+    }
+
+    .ts-case-name {
+        font-family: var(--ts-font-mono);
+        color: var(--ts-text-primary);
+    }
+
+    .ts-row-failed-link {
+        cursor: pointer;
+        border-left: 2px solid var(--ts-result-failed);
+    }
+
+    .ts-row-failed-link:hover {
+        background-color: hsla(238, 62%, 58%, 0.10) !important;
+    }
+
+    .ts-row-failed-link a {
+        color: var(--ts-result-failed);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .ts-row-failed-link a:hover {
+        text-decoration: underline;
+    }
+
+    .ts-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.4rem;
+        border: 1px solid transparent;
+    }
+
+    .ts-status-succeed { background-color: hsla(217, 91%, 63%, 0.12); border-color: hsla(217, 91%, 63%, 0.32); color: var(--ts-result-succeed); }
+    .ts-status-failed { background-color: hsla(238, 62%, 58%, 0.12); border-color: hsla(238, 62%, 58%, 0.32); color: var(--ts-result-failed); }
+    .ts-status-excluded { background-color: hsla(196, 82%, 58%, 0.12); border-color: hsla(196, 82%, 58%, 0.32); color: var(--ts-result-excluded); }
+
+    /* ---------- Pagination Footer ---------- */
+    .ts-pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid var(--ts-glass-border);
+        font-size: 0.8rem;
+        color: var(--ts-text-muted);
+    }
+
+    .ts-pagination-btn {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-primary);
+        font-size: 0.8rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 0.5rem;
+    }
+
+    .ts-pagination-btn:hover:not(:disabled) {
+        border-color: var(--ts-accent);
+        background: var(--ts-glow-a);
+    }
+
+    .ts-pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .ts-empty-state {
+        padding: 2.5rem;
+        text-align: center;
+        color: var(--ts-text-muted);
+    }
+{% endblock %}
+
+{% block content %}
+
+    <!-- ============ KPI CARDS ============ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+                <div class="ts-metric-icon ts-icon-total">
+                    <i class="bi bi-collection"></i>
+                </div>
+                <div>
+                    <div class="ts-metric-value">{{ total_cases | default(0) }}</div>
+                    <div class="ts-metric-label">Total Cases</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+                <div class="ts-metric-icon ts-icon-succeed">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div>
+                    <div class="ts-metric-value">{{ succeed_count | default(0) }}</div>
+                    <div class="ts-metric-label">Succeed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+                <div class="ts-metric-icon ts-icon-failed">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div>
+                    <div class="ts-metric-value">{{ failed_count | default(0) }}</div>
+                    <div class="ts-metric-label">Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="ts-surface ts-metric-card p-3 h-100 d-flex align-items-center gap-3">
+                <div class="ts-metric-icon ts-icon-excluded">
+                    <i class="bi bi-dash-circle"></i>
+                </div>
+                <div>
+                    <div class="ts-metric-value">{{ excluded_count | default(0) }}</div>
+                    <div class="ts-metric-label">Excluded</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ COVERAGE BAR CHART ============ -->
+    <div class="ts-surface p-4 mb-4">
+        <h2 class="ts-section-title" style="font-size: 1.1rem; font-weight: 700; margin: 0;">Cross-Module Functional Coverage Matrix</h2>
+        <p class="ts-section-subtitle" style="font-size: 0.8rem; color: var(--ts-text-muted); margin: 0.3rem 0 1.25rem;">
+            Succeed / failed / excluded distribution per test set.
+        </p>
+
+        <div class="ts-coverage-legend">
+            <span class="ts-legend-chip"><span class="ts-legend-marker" style="background: var(--ts-result-succeed);"></span> Succeed</span>
+            <span class="ts-legend-chip"><span class="ts-legend-marker" style="background: var(--ts-result-failed);"></span> Failed</span>
+            <span class="ts-legend-chip"><span class="ts-legend-marker" style="background: var(--ts-result-excluded);"></span> Excluded</span>
+        </div>
+
+        <div class="ts-coverage-row-list" id="coverageRowList">
+            {% for ts in testset_breakdown | default([]) %}
+            {% set row_total = ts.SUCCEED + ts.FAILED + ts.EXCLUDED %}
+            <div class="ts-coverage-row{{ '' if loop.index0 < 5 else ' d-none' }}">
+                <div class="ts-coverage-row-header">
+                    <strong>{{ ts.name }}</strong>
+                    <span class="ts-coverage-row-stats">{{ ts.SUCCEED }} succeed &middot; {{ ts.FAILED }} failed &middot; {{ ts.EXCLUDED }} excluded</span>
+                </div>
+                {% if row_total and row_total > 0 %}
+                <div class="ts-coverage-bar" role="img" aria-label="{{ ts.name }}: {{ ts.SUCCEED }} succeed, {{ ts.FAILED }} failed, {{ ts.EXCLUDED }} excluded">
+                    {% if ts.SUCCEED %}<span style="flex-basis: {{ (ts.SUCCEED / row_total * 100) | round(2) }}%; background: var(--ts-result-succeed);"></span>{% endif %}
+                    {% if ts.FAILED %}<span style="flex-basis: {{ (ts.FAILED / row_total * 100) | round(2) }}%; background: var(--ts-result-failed);"></span>{% endif %}
+                    {% if ts.EXCLUDED %}<span style="flex-basis: {{ (ts.EXCLUDED / row_total * 100) | round(2) }}%; background: var(--ts-result-excluded);"></span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-secondary text-center py-3 mb-0">No test-set breakdown is available for this suite.</p>
+            {% endfor %}
+        </div>
+
+        {% if (testset_breakdown | default([]) | length) > 5 %}
+        <div class="d-flex justify-content-end mt-3">
+            <button type="button" id="loadMoreTestsets" class="ts-pagination-btn">Load more test sets</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ============ INTERACTIVE CATALOG ============ -->
+    <div class="ts-table-wrapper">
+        <div class="ts-toolbar">
+            <div>
+                <h2 class="ts-section-title" style="font-size: 1.05rem; font-weight: 700; margin: 0;">Interactive Execution Catalog</h2>
+                <p class="ts-section-subtitle" style="font-size: 0.78rem; color: var(--ts-text-muted); margin: 0.25rem 0 0;">Sort, filter, and isolate individual test cases.</p>
+            </div>
+            <div class="ts-toolbar-controls">
+                <input type="text" id="globalSearch" class="form-control ts-toolbar-input" placeholder="Filter by case name or test set...">
+                <select id="statusFilter" class="form-select ts-toolbar-select">
+                    <option value="ALL">All Outcomes</option>
+                    <option value="SUCCEED">Succeed</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="EXCLUDED">Excluded</option>
+                </select>
+                <div class="ts-columns-menu">
+                    <button type="button" id="columnsBtn" class="ts-pagination-btn ts-columns-btn">
+                        <i class="bi bi-layout-three-columns"></i> Columns
+                    </button>
+                    <div id="columnsPanel" class="ts-columns-panel d-none">
+                        <label><input type="checkbox" checked data-column="col-id"> ID</label>
+                        <label><input type="checkbox" checked data-column="col-set"> Test Set</label>
+                        <label><input type="checkbox" checked data-column="col-desc"> Description</label>
+                        <label><input type="checkbox" checked data-column="col-elapse"> Elapse</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table ts-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="col-id" data-sort="id">ID <i class="bi bi-arrow-down-up"></i></th>
+                        <th data-sort="name">Test Case <i class="bi bi-arrow-down-up"></i></th>
+                        <th class="col-set" data-sort="test_set">Test Set <i class="bi bi-arrow-down-up"></i></th>
+                        <th data-sort="result">Result <i class="bi bi-arrow-down-up"></i></th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-elapse" data-sort="elapse_ms">Elapse <i class="bi bi-arrow-down-up"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Rendered client-side from the hydrated dataset below -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="ts-pagination-bar">
+            <span id="rowCounter">Showing 0 of 0 entries</span>
+            <div class="d-flex gap-2">
+                <button type="button" id="prevPageBtn" class="ts-pagination-btn">Previous</button>
+                <button type="button" id="nextPageBtn" class="ts-pagination-btn">Next</button>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Hydrate the full row-level dataset once; sort/filter/paginate entirely client-side so
+        // a large suite (thousands of rows) never has to be rendered into the DOM at once.
+        const TS_DATASET = {{ test_cases | default([]) | tojson }};
+
+        (function () {
+            const tableBody = document.getElementById('tableBody');
+            const globalSearch = document.getElementById('globalSearch');
+            const statusFilter = document.getElementById('statusFilter');
+            const rowCounter = document.getElementById('rowCounter');
+            const prevPageBtn = document.getElementById('prevPageBtn');
+            const nextPageBtn = document.getElementById('nextPageBtn');
+            const pageSize = 25;
+
+            let filtered = TS_DATASET.slice();
+            let currentPage = 0;
+            let sortField = 'id';
+            let sortAscending = true;
+
+            function applyFilters() {
+                const query = globalSearch.value.trim().toLowerCase();
+                const status = statusFilter.value;
+
+                filtered = TS_DATASET.filter(function (row) {
+                    const matchesQuery = !query
+                        || row.name.toLowerCase().includes(query)
+                        || row.test_set.toLowerCase().includes(query);
+                    const matchesStatus = status === 'ALL' || row.result === status;
+                    return matchesQuery && matchesStatus;
+                });
+
+                currentPage = 0;
+                sortRows();
+                renderTable();
+            }
+
+            function sortRows() {
+                filtered.sort(function (a, b) {
+                    const valA = a[sortField];
+                    const valB = b[sortField];
+                    let result;
+                    if (typeof valA === 'string') {
+                        result = valA.localeCompare(valB);
+                    } else {
+                        result = valA - valB;
+                    }
+                    return sortAscending ? result : -result;
+                });
+            }
+
+            function statusBadge(result) {
+                if (result === 'SUCCEED') {
+                    return '<span class="ts-status-badge ts-status-succeed"><i class="bi bi-check-circle"></i> Succeed</span>';
+                }
+                if (result === 'FAILED') {
+                    return '<span class="ts-status-badge ts-status-failed"><i class="bi bi-x-circle"></i> Failed</span>';
+                }
+                return '<span class="ts-status-badge ts-status-excluded"><i class="bi bi-dash-circle"></i> Excluded</span>';
+            }
+
+            function renderTable() {
+                tableBody.innerHTML = '';
+
+                if (filtered.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="ts-empty-state">No test cases match the current filters.</td></tr>';
+                    rowCounter.textContent = 'Showing 0 of 0 entries';
+                    prevPageBtn.disabled = true;
+                    nextPageBtn.disabled = true;
+                    return;
+                }
+
+                const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+                if (currentPage >= totalPages) {
+                    currentPage = totalPages - 1;
+                }
+
+                const start = currentPage * pageSize;
+                const end = Math.min(start + pageSize, filtered.length);
+                const pageRows = filtered.slice(start, end);
+
+                pageRows.forEach(function (row) {
+                    const tr = document.createElement('tr');
+                    const isFailedLink = row.result === 'FAILED' && row.failure_url;
+
+                    if (isFailedLink) {
+                        tr.classList.add('ts-row-failed-link');
+                    }
+
+                    const nameCell = isFailedLink
+                        ? '<a href="' + row.failure_url + '" target="_blank" rel="noopener noreferrer">' + row.name + ' <i class="bi bi-box-arrow-up-right"></i></a>'
+                        : row.name;
+
+                    tr.innerHTML =
+                        '<td class="col-id">' + row.id + '</td>' +
+                        '<td class="ts-case-name">' + nameCell + '</td>' +
+                        '<td class="col-set">' + row.test_set + '</td>' +
+                        '<td>' + statusBadge(row.result) + '</td>' +
+                        '<td class="col-desc" title="' + row.description + '">' + row.description + '</td>' +
+                        '<td class="col-elapse">' + row.elapse_ms + ' ms</td>';
+
+                    if (isFailedLink) {
+                        tr.addEventListener('click', function (event) {
+                            if (event.target.closest('a')) {
+                                return;
+                            }
+                            window.open(row.failure_url, '_blank', 'noopener,noreferrer');
+                        });
+                    }
+
+                    tableBody.appendChild(tr);
+                });
+
+                rowCounter.textContent = 'Showing ' + (start + 1) + '-' + end + ' of ' + filtered.length + ' entries';
+                prevPageBtn.disabled = currentPage === 0;
+                nextPageBtn.disabled = end >= filtered.length;
+            }
+
+            globalSearch.addEventListener('input', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+
+            prevPageBtn.addEventListener('click', function () {
+                if (currentPage > 0) {
+                    currentPage -= 1;
+                    renderTable();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', function () {
+                currentPage += 1;
+                renderTable();
+            });
+
+            document.querySelectorAll('.ts-table thead th[data-sort]').forEach(function (th) {
+                th.addEventListener('click', function () {
+                    const field = th.getAttribute('data-sort');
+                    if (sortField === field) {
+                        sortAscending = !sortAscending;
+                    } else {
+                        sortField = field;
+                        sortAscending = true;
+                    }
+
+                    document.querySelectorAll('.ts-table thead th').forEach(function (header) {
+                        header.classList.remove('ts-sort-active');
+                        const icon = header.querySelector('.bi');
+                        if (icon) {
+                            icon.className = 'bi bi-arrow-down-up';
+                        }
+                    });
+
+                    th.classList.add('ts-sort-active');
+                    const activeIcon = th.querySelector('.bi');
+                    if (activeIcon) {
+                        activeIcon.className = sortAscending ? 'bi bi-sort-up' : 'bi bi-sort-down';
+                    }
+
+                    sortRows();
+                    renderTable();
+                });
+            });
+
+            // Columns visibility toggle
+            const columnsBtn = document.getElementById('columnsBtn');
+            const columnsPanel = document.getElementById('columnsPanel');
+
+            columnsBtn.addEventListener('click', function () {
+                columnsPanel.classList.toggle('d-none');
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!columnsPanel.contains(event.target) && event.target !== columnsBtn && !columnsBtn.contains(event.target)) {
+                    columnsPanel.classList.add('d-none');
+                }
+            });
+
+            columnsPanel.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    const columnClass = checkbox.getAttribute('data-column');
+                    document.querySelectorAll('.' + columnClass).forEach(function (cell) {
+                        cell.classList.toggle('d-none', !checkbox.checked);
+                    });
+                });
+            });
+
+            sortRows();
+            renderTable();
+        })();
+
+        // Progressive reveal for the coverage bar chart ("Load more test sets")
+        (function () {
+            const loadMoreBtn = document.getElementById('loadMoreTestsets');
+            if (!loadMoreBtn) {
+                return;
+            }
+
+            loadMoreBtn.addEventListener('click', function () {
+                document.querySelectorAll('#coverageRowList .ts-coverage-row.d-none').forEach(function (row) {
+                    row.classList.remove('d-none');
+                });
+                loadMoreBtn.remove();
+            });
+        })();
+    </script>
+{% endblock %}

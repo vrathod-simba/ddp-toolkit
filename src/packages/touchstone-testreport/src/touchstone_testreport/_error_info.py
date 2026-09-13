@@ -17,6 +17,8 @@ class ErrorInfo:
         if not (in_file and in_file.exists() and in_file.is_file() and in_file.name.endswith('_verbose.log')):
             raise ValueError(f'Invalid File: {in_file}, MUST be an existing file with suffix "_verbose.log"')
 
+        suite_name: str = in_file.name.replace('__verbose.log', '').replace('_verbose.log', '')
+
         out_dir: Path = Path(in_out_dir).resolve().absolute()
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -40,7 +42,7 @@ class ErrorInfo:
                 # TODO: Add logging
                 continue
 
-            suite_name, set_name, test_name, test_id = test_match.groups()
+            unused, set_name, test_name, test_id = test_match.groups()
             err_file: Path = Path(
                 out_dir / f'{suite_name}--{set_name}--{test_name}--{test_id}.txt'
             ).resolve().absolute()
