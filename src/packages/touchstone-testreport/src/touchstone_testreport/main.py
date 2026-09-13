@@ -105,8 +105,8 @@ def main(in_test_output_dir: str):
         artifact_suites.append(artifact)
 
     template.to_html(
-        in_template_name='artifact_explorer.html',
-        in_out_filename='artifact_explorer.html',
+        in_template_name='home.html',
+        in_out_filename='home.html',
         exec_time=exec_info.datetime,
         ts_ver=exec_info.ts_ver,
         pipeline_url=os.getenv('PIPELINE_URL', ''),
