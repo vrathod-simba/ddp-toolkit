@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{#
+    Expected context shape:
+
+    artifact_suites = [
+        {
+            "name": "API_FAILED",
+            "artifacts": [
+                {"label": "Info", "filename": "API_FAILED_info.csv", "href": "Logs/API_FAILED_info.csv"},
+                {"label": "Performance", "filename": "API_FAILED_performance.csv", "href": "Logs/API_FAILED_performance.csv"},
+                {"label": "Set Summary", "filename": "API_FAILED_set_summary.csv", "href": "Logs/API_FAILED_set_summary.csv"},
+                {"label": "Summary (CSV)", "filename": "API_FAILED_summary.csv", "href": "Logs/API_FAILED_summary.csv"},
+                {"label": "Summary (XML)", "filename": "API_FAILED_summary.xml", "href": "Logs/API_FAILED_summary.xml"},
+                {"label": "Temp Log", "filename": "API_FAILED_temp.txt", "href": "Logs/API_FAILED_temp.txt"},
+                {"label": "Verbose Log", "filename": "API_FAILED_verbose.log", "href": "Logs/API_FAILED_verbose.log"},
+                {"label": "HTML Report", "filename": "API_FAILED.html", "href": "Logs/reports/API_FAILED.html"}
+            ]
+        },
+        ...
+    ]
+#}
+
+{% macro artifact_icon(filename) -%}
+    {%- set ext = filename.rsplit('.', 1)[-1] | lower -%}
+    {%- if ext == 'csv' -%}bi-filetype-csv
+    {%- elif ext == 'xml' -%}bi-filetype-xml
+    {%- elif ext == 'txt' -%}bi-filetype-txt
+    {%- elif ext == 'html' or ext == 'htm' -%}bi-filetype-html
+    {%- elif ext == 'json' -%}bi-filetype-json
+    {%- elif ext == 'log' -%}bi-journal-text
+    {%- else -%}bi-file-earmark
+    {%- endif -%}
+{%- endmacro %}
+
+{% block title %}Touchstone Test Report - Artifact Explorer{% endblock %}
+
+{% block extra_styles %}
+    .ts-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .ts-section-subtitle {
+        font-size: 0.82rem;
+        color: var(--ts-text-muted);
+        margin: 0.3rem 0 0;
+    }
+
+    .ts-suite-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 240px;
+    }
+
+    .ts-suite-picker-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ts-text-muted);
+        font-weight: 700;
+    }
+
+    .ts-suite-select {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-primary);
+        color-scheme: dark;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .ts-suite-select:focus {
+        border-color: var(--ts-accent);
+        box-shadow: 0 0 0 0.2rem var(--ts-glow-a);
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-text-primary);
+    }
+
+    body.light-mode-active .ts-suite-select {
+        color-scheme: light;
+    }
+
+    .ts-artifact-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .ts-artifact-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 0.9rem;
+        border-radius: 0.65rem;
+        border: 1px solid var(--ts-glass-border);
+        background: var(--ts-glass-bg);
+        color: var(--ts-text-primary);
+        text-decoration: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .ts-artifact-row:hover {
+        border-color: var(--ts-accent);
+        background: var(--ts-glow-a);
+        color: var(--ts-text-primary);
+        transform: translateX(3px);
+    }
+
+    .ts-artifact-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-accent-tint);
+        font-size: 1.1rem;
+    }
+
+    .ts-artifact-meta {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .ts-artifact-label {
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .ts-artifact-filename {
+        font-family: var(--ts-font-mono);
+        font-size: 0.72rem;
+        color: var(--ts-text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ts-artifact-open {
+        flex-shrink: 0;
+        color: var(--ts-text-muted);
+        transition: color 0.15s ease;
+    }
+
+    .ts-artifact-row:hover .ts-artifact-open {
+        color: var(--ts-accent-tint);
+    }
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="report.html"><i class="bi bi-house-door-fill"></i> Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Artifact Explorer</li>
+{% endblock %}
+
+{% block content %}
+
+    <div class="ts-surface p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h2 class="ts-section-title">Artifact Explorer</h2>
+                <p class="ts-section-subtitle">Browse the generated logs, summaries, and reports produced for each test suite.</p>
+            </div>
+
+            {% if artifact_suites %}
+            <div class="ts-suite-picker">
+                <label for="suiteSelect" class="ts-suite-picker-label">Test Suite</label>
+                <select id="suiteSelect" class="form-select ts-suite-select">
+                    {% for suite in artifact_suites %}
+                    <option value="ts-suite-panel-{{ loop.index }}">{{ suite.name }} ({{ suite.artifacts | length }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="ts-artifact-panels">
+            {% for suite in artifact_suites %}
+            <div class="ts-artifact-panel{{ '' if loop.first else ' d-none' }}" id="ts-suite-panel-{{ loop.index }}">
+                <div class="ts-artifact-list">
+                    {% for artifact in suite.artifacts %}
+                    <a href="{{ artifact.href }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="ts-artifact-row">
+                        <span class="ts-artifact-icon">
+                            <i class="bi {{ artifact_icon(artifact.filename) }}"></i>
+                        </span>
+                        <span class="ts-artifact-meta">
+                            <span class="ts-artifact-label">{{ artifact.label }}</span>
+                            <span class="ts-artifact-filename">[{{ artifact.filename }}]</span>
+                        </span>
+                        <i class="bi bi-box-arrow-up-right ts-artifact-open"></i>
+                    </a>
+                    <br/>
+                    {% else %}
+                    <p class="text-secondary small mb-0">No artifacts were found for this suite.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <p class="text-secondary text-center py-5 mb-0">No test suites were discovered in the artifact directory.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Show only the artifact panel matching the selected test suite.
+        (function () {
+            const select = document.getElementById('suiteSelect');
+            if (!select) {
+                return;
+            }
+
+            select.addEventListener('change', function () {
+                document.querySelectorAll('.ts-artifact-panel').forEach(function (panel) {
+                    panel.classList.add('d-none');
+                });
+
+                const target = document.getElementById(select.value);
+                if (target) {
+                    target.classList.remove('d-none');
+                }
+            });
+        })();
+    </script>
+{% endblock %}
