@@ -1,10 +1,12 @@
 import re
 from pathlib import Path
-from typing import Annotated, ClassVar, Self
+from typing import Annotated, ClassVar
 
 from pydantic import BeforeValidator
 from pydantic.fields import Field
-from pydantic.types import FilePath, StringConstraints
+from pydantic.types import FilePath
+# For Python backward compatibility (3.11 and below)
+from typing_extensions import Self
 
 from touchstone_testreport.models._base import BaseTestEntityModel, TestCaseResult
 from touchstone_testreport.models._test_set import TestSetModel

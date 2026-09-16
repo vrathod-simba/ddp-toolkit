@@ -1,8 +1,9 @@
 import re
 from pathlib import Path
-from typing import Self
 
 from pydantic.fields import Field
+# For Python backward compatibility (3.11 and below)
+from typing_extensions import Self
 
 from touchstone_testreport.models._base import BaseTestEntityModel
 
