@@ -21,6 +21,7 @@ def main(in_test_output_dir: str):
         in_template_dir=Path(__file__).parent / 'templates',
         in_out_dir=test_output_dir / 'reports'
     )
+    pipeline_url: str = os.getenv('BUILD_URL', '#')
 
     for file_path in test_output_dir.glob('*_verbose.log'):
         file_path: Path = Path(file_path).resolve().absolute()
@@ -75,7 +76,7 @@ def main(in_test_output_dir: str):
             suite_name=test_suite.name.upper(),
             exec_time=exec_info.datetime,
             ts_ver=exec_info.ts_ver,
-            pipeline_url=os.getenv('PIPELINE_URL', ''),
+            pipeline_url=pipeline_url,
             total_cases=test_suite.total_cases_count,
             succeed_count=normalized[TestCaseResult.SUCCEED.name],
             failed_count=normalized[TestCaseResult.FAILED.name],
@@ -109,7 +110,7 @@ def main(in_test_output_dir: str):
         in_out_filename='home.html',
         exec_time=exec_info.datetime,
         ts_ver=exec_info.ts_ver,
-        pipeline_url=os.getenv('BUILD_URL', ''),
+        pipeline_url=pipeline_url,
         artifact_suites=artifact_suites
     )
 
