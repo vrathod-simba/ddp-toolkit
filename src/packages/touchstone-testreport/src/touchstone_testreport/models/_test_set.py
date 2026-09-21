@@ -2,6 +2,7 @@ from csv import DictReader
 from pathlib import Path
 from typing import Annotated, Self
 
+from pydantic import ValidationError
 from pydantic.fields import Field
 from pydantic.types import StringConstraints
 
@@ -45,11 +46,14 @@ class TestSetModel(BaseTestEntityModel):
         test_sets: dict[str, Self] = dict()
         with in_file.open(mode='r', encoding='utf-8') as file:
             test_set: Self
-            test_set_name: str
 
             reader: DictReader[str] = DictReader(file)
             for row in reader:
-                test_set = cls(**row)
+                try:
+                    test_set = cls(**row)
+                except (ValidationError, TypeError) as error:
+                    # TODO: Add logging
+                    continue
                 if test_set.name not in test_sets:
                     test_sets[test_set.name] = test_set
 

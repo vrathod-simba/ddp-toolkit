@@ -2,7 +2,7 @@ from csv import DictReader
 from pathlib import Path
 from typing import Annotated, Self
 
-from pydantic import BeforeValidator
+from pydantic import BeforeValidator, ValidationError
 from pydantic.fields import Field
 from pydantic.types import PositiveFloat
 
@@ -73,6 +73,10 @@ class TestCaseModel(BaseTestEntityModel):
         with in_file.open(mode='r', encoding='utf-8') as file:
             reader: DictReader[str] = DictReader(file)
             for row in reader:
-                test_cases.append(cls(**row))
+                try:
+                    test_cases.append(cls(**row))
+                except (ValidationError, TypeError) as error:
+                    # TODO: Add logging
+                    continue
 
         return test_cases

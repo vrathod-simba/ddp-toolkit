@@ -16,7 +16,7 @@ def main(in_test_output_dir: str):
         return
 
     suites: dict[str, TestSuiteModel] = {}
-    exec_info: TestExecutionModel
+    exec_info: TestExecutionModel = None
     template: TouchstoneTestTemplate = TouchstoneTestTemplate(
         in_template_dir=Path(__file__).parent / 'templates',
         in_out_dir=test_output_dir / 'reports'
@@ -27,12 +27,12 @@ def main(in_test_output_dir: str):
         file_path: Path = Path(file_path).resolve().absolute()
 
         # 1. Extract the error diagnostics from '_verbose.log' files for each test suites
+        ErrorInfo.parse(file_path, test_output_dir / 'failures')
         try:
             exec_info = TestExecutionModel.from_file(file_path)
-            ErrorInfo.parse(file_path, test_output_dir / 'failures')
         except ValueError as error:
-            # print(error)
-            continue
+            # Intentional empty/default object creation for non-critical details
+            exec_info = TestExecutionModel()
 
         # 2. Parse '_summary.csv' files for each test suites
         test_suite: TestSuiteModel
@@ -45,14 +45,14 @@ def main(in_test_output_dir: str):
             test_suite = TestSuiteModel.from_csv(summary_file_path)
             suites[test_suite.name] = test_suite
         except ValueError as error:
-            # print(f'{str(file_path)} failed validation')
+            # print(f'{str(summary_file_path)} failed validation')
             continue
 
         # 3. Generate Test reports
         normalized = TestCaseResult.to_normalized(test_suite.test_results)
         cases: list[dict[str, Any]] = []
         test_set_results: list[dict[str, Any]] = []
-        for ident, test_set in test_suite.test_sets.items():
+        for test_set in test_suite.test_sets.values():
             test_set_result: dict[str, Any] = {'name': test_set.name.upper()}
             test_set_result.update(TestCaseResult.to_normalized(test_set.test_results))
             test_set_results.append(test_set_result)
