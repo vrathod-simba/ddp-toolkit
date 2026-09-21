@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{#
+    Expected context shape:
+
+    artifact_suites = [
+        {
+            "name": "API_FAILED",
+            "url": "suites/API_FAILED.html",
+            "result_counts": {
+                # Keys MUST be TestCaseResult member names (see models/_base.py), e.g. result.name.
+                # Only non-zero entries need to be present - the template also filters defensively.
+                "SUCCEED": 118,
+                "FAILED": 5,
+                "EXCLUDED": 3
+            },
+            "artifacts": [
+                {"label": "Info", "filename": "API_FAILED_info.csv", "href": "Logs/API_FAILED_info.csv"},
+                {"label": "Performance", "filename": "API_FAILED_performance.csv", "href": "Logs/API_FAILED_performance.csv"},
+                {"label": "Set Summary", "filename": "API_FAILED_set_summary.csv", "href": "Logs/API_FAILED_set_summary.csv"},
+                {"label": "Summary (CSV)", "filename": "API_FAILED_summary.csv", "href": "Logs/API_FAILED_summary.csv"},
+                {"label": "Summary (XML)", "filename": "API_FAILED_summary.xml", "href": "Logs/API_FAILED_summary.xml"},
+                {"label": "Temp Log", "filename": "API_FAILED_temp.txt", "href": "Logs/API_FAILED_temp.txt"},
+                {"label": "Verbose Log", "filename": "API_FAILED_verbose.log", "href": "Logs/API_FAILED_verbose.log"},
+                {"label": "HTML Report", "filename": "API_FAILED.html", "href": "Logs/reports/API_FAILED.html"}
+            ]
+        },
+        ...
+    ]
+#}
+
+{% macro artifact_icon(filename) -%}
+    {%- set ext = filename.rsplit('.', 1)[-1] | lower -%}
+    {%- if ext == 'csv' -%}bi-filetype-csv
+    {%- elif ext == 'xml' -%}bi-filetype-xml
+    {%- elif ext == 'txt' -%}bi-filetype-txt
+    {%- elif ext == 'html' or ext == 'htm' -%}bi-filetype-html
+    {%- elif ext == 'json' -%}bi-filetype-json
+    {%- elif ext == 'log' -%}bi-journal-text
+    {%- else -%}bi-file-earmark
+    {%- endif -%}
+{%- endmacro %}
+
+{#
+    Renders a rounded-cap, gapped donut ring as plain SVG <circle> arcs (no chart library).
+    `buckets` is a list of {label, count, color} dicts; only entries with count > 0 draw an arc.
+    Colors come from the --ts-result-* tokens in base.html (blue/indigo/cyan/slate family only).
+#}
+{% macro donut_arcs(buckets, total, radius=45, stroke=16, gap=4) -%}
+    {%- set circumference = 2 * 3.141592653589793 * radius -%}
+    {%- set visible = buckets | selectattr('count', 'gt', 0) | list -%}
+    {%- set n = visible | length -%}
+    {%- if n > 0 -%}
+        {%- set usable = circumference - (gap * n) -%}
+        {%- set ns = namespace(offset=0) -%}
+        {%- for b in visible -%}
+            {%- set seg = (b.count / total * usable) -%}
+            <circle cx="60" cy="60" r="{{ radius }}" fill="none" stroke="{{ b.color }}" stroke-width="{{ stroke }}" stroke-linecap="round" stroke-dasharray="{{ seg | round(2) }} {{ (circumference - seg) | round(2) }}" stroke-dashoffset="{{ (-ns.offset) | round(2) }}"></circle>
+            {%- set ns.offset = ns.offset + seg + gap -%}
+        {%- endfor -%}
+    {%- endif -%}
+{%- endmacro %}
+
+{% block title %}Touchstone Test Report - Artifact Explorer{% endblock %}
+
+{% block breadcrumb %}
+{% endblock %}
+
+{% block extra_styles %}
+    .ts-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .ts-section-subtitle {
+        font-size: 0.82rem;
+        color: var(--ts-text-muted);
+        margin: 0.3rem 0 0;
+    }
+
+    .ts-suite-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        width: 100%;
+    }
+
+    .ts-suite-picker-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ts-text-muted);
+        font-weight: 700;
+    }
+
+    .ts-suite-select {
+        background: var(--ts-glass-bg-strong);
+        border: 1px solid var(--ts-glass-border);
+        color: var(--ts-text-primary);
+        color-scheme: dark;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .ts-suite-select:focus {
+        border-color: var(--ts-accent);
+        box-shadow: 0 0 0 0.2rem var(--ts-glow-a);
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-text-primary);
+    }
+
+    body.light-mode-active .ts-suite-select {
+        color-scheme: light;
+    }
+
+    .ts-panel-heading {
+        margin-bottom: 1rem;
+    }
+
+    .ts-result-overview {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .ts-pie-chart {
+        width: 130px;
+        height: 130px;
+        flex-shrink: 0;
+        display: block;
+    }
+
+    .ts-result-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        min-width: 150px;
+    }
+
+    .ts-legend-marker {
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .ts-legend-text {
+        color: var(--ts-text-primary);
+        font-size: 0.85rem;
+    }
+
+    .ts-legend-count {
+        color: var(--ts-text-muted);
+        font-size: 0.78rem;
+        font-family: var(--ts-font-mono);
+    }
+
+    .ts-artifact-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        background: var(--ts-glass-bg-strong);
+        color: var(--ts-accent-tint);
+        font-size: 1.1rem;
+    }
+
+    .ts-artifact-meta {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .ts-artifact-label {
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .ts-artifact-filename {
+        font-family: var(--ts-font-mono);
+        font-size: 0.72rem;
+        color: var(--ts-text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ts-artifact-open {
+        flex-shrink: 0;
+        color: var(--ts-text-muted);
+        transition: color 0.15s ease;
+    }
+
+    .ts-list-group .list-group-item:hover .ts-artifact-open {
+        color: var(--ts-accent-tint);
+    }
+{% endblock %}
+
+{% block content %}
+
+    <div class="ts-surface p-4">
+        <div class="ts-panel-heading">
+            <h2 class="ts-section-title">Artifact Explorer</h2>
+            <p class="ts-section-subtitle">Browse the generated logs, summaries, and reports produced for each test suite.</p>
+        </div>
+
+        {% if artifact_suites %}
+        <div class="ts-suite-picker mb-4">
+            <label for="suiteSelect" class="ts-suite-picker-label">Test Suite</label>
+            <select id="suiteSelect" class="form-select ts-suite-select w-100">
+                {% for suite in artifact_suites %}
+                <option value="ts-suite-panel-{{ loop.index }}">{{ suite.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="ts-artifact-panels">
+            {% for suite in artifact_suites %}
+            <div class="ts-artifact-panel{{ '' if loop.first else ' d-none' }}" id="ts-suite-panel-{{ loop.index }}">
+                <div class="row">
+
+                    <!-- Left: suite insights link + result breakdown pie chart -->
+                    <div class="col-12 col-md-6">
+                        {% if suite.url %}
+                        <a href="{{ suite.url }}" class="ts-link">
+                            <i class="bi bi-graph-up-arrow"></i>
+                            <span>View detailed insights for <strong>{{ suite.name }}</strong></span>
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                        {% endif %}
+
+                        {% set ns = namespace(succeed=0, failed=0, excluded=0, other=0) %}
+                        {% for key, count in suite.result_counts.items() %}
+                            {% if key == 'SUCCEED' %}
+                                {% set ns.succeed = ns.succeed + count %}
+                            {% elif key == 'FAILED' %}
+                                {% set ns.failed = ns.failed + count %}
+                            {% elif key == 'EXCLUDED' %}
+                                {% set ns.excluded = ns.excluded + count %}
+                            {% else %}
+                                {% set ns.other = ns.other + count %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set buckets = [
+                            {'label': 'Succeed', 'count': ns.succeed, 'color': 'var(--ts-result-succeed)'},
+                            {'label': 'Failed', 'count': ns.failed, 'color': 'var(--ts-result-failed)'},
+                            {'label': 'Excluded', 'count': ns.excluded, 'color': 'var(--ts-result-excluded)'},
+                            {'label': 'Other', 'count': ns.other, 'color': 'var(--ts-result-other)'},
+                        ] %}
+                        {% set total = buckets | sum(attribute='count') %}
+
+                        {% if total and total > 0 %}
+                        <div class="ts-result-overview">
+                            <svg class="ts-pie-chart" viewBox="0 0 120 120" role="img" aria-label="Result breakdown for {{ suite.name }}">
+                                <g transform="rotate(-90 60 60)">
+                                    {{ donut_arcs(buckets, total) }}
+                                </g>
+                            </svg>
+                            <ul class="ts-result-legend list-unstyled mb-0">
+                                {% for b in buckets if b.count and b.count > 0 %}
+                                <li class="d-flex align-items-center gap-2">
+                                    <span class="ts-legend-marker" style="background: {{ b.color }};"></span>
+                                    <span class="ts-legend-text flex-grow-1"><strong>{{ (b.count / total * 100) | round(1) }}%</strong> {{ b.label }}</span>
+                                    <span class="ts-legend-count">{{ b.count }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Right: test artifact links -->
+                    <div class="col-12 col-md-6">
+                        <div class="list-group ts-list-group">
+                            {% for artifact in suite.artifacts %}
+                            <a href="{{ artifact.href }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+                                <span class="ts-artifact-icon">
+                                    <i class="bi {{ artifact_icon(artifact.filename) }}"></i>
+                                </span>
+                                <span class="ts-artifact-meta">
+                                    <span class="ts-artifact-label">{{ artifact.label }}</span>
+                                    <span class="ts-artifact-filename">{{ artifact.filename }}</span>
+                                </span>
+                                <i class="bi bi-box-arrow-up-right ts-artifact-open"></i>
+                            </a>
+                            {% else %}
+                            <p class="text-secondary small mb-0 p-3">No artifacts were found for this suite.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% else %}
+            <p class="text-secondary text-center py-5 mb-0">No test suites were discovered in the artifact directory.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Show only the artifact panel matching the selected test suite.
+        (function () {
+            const select = document.getElementById('suiteSelect');
+            if (!select) {
+                return;
+            }
+
+            select.addEventListener('change', function () {
+                document.querySelectorAll('.ts-artifact-panel').forEach(function (panel) {
+                    panel.classList.add('d-none');
+                });
+
+                const target = document.getElementById(select.value);
+                if (target) {
+                    target.classList.remove('d-none');
+                }
+            });
+        })();
+    </script>
+{% endblock %}

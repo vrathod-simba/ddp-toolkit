@@ -1,12 +1,10 @@
 [project]
-name            = "ddp-toolkit"
+name            = "touchstone-testreport"
 version         = "0.1.0"
 description     = "Add your description here"
 readme          = "README.md"
 requires-python = ">=3.12"
-license         = "MIT"
-license-files   = [ "LICENSE" ]
-keywords        = [ "python", "ddp", "touchstone", "perftest" ]
+keywords        = [ "python", "ddp", "touchstone", "report" ]
 classifiers     = [
     "Development Status :: 3 - Alpha",
     "Operating System :: OS Independent",
@@ -17,14 +15,17 @@ classifiers     = [
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
-dependencies    = []
+dependencies    = [
+    "jinja2>=3.1.6",
+    "pydantic>=2.13.5",
+]
 
 [[project.authors]]
 name            = "Vipul Rathod"
 email           = "vipul.rathod@insightsoftware.com"
 
-# [project.scripts]
-# <package> = "<package>.main:main"
+[project.scripts]
+touchstone-testreport = "touchstone_testreport.main:main"
 
 [project.urls]
 Homepage        = "https://github.com/vrathod-simba/ddp-toolkit"
@@ -33,22 +34,18 @@ Issues          = "https://github.com/vrathod-simba/ddp-toolkit/issues"
 Documentation   = "https://github.com/vrathod-simba/ddp-toolkit#readme"
 Changelog       = "https://github.com/vrathod-simba/ddp-toolkit/releases"
 
-# Note: is inherited by all the workspace members and open to override in the individual members.
-[dependency-groups]
-dev = [
-    "pytest>=8",
-    "pytest-cov>=5",
-    "ruff>=0.6",
-    "mypy>=1.11",
-]
-
 [tool.uv]
 required-version    = ">=0.5"
-default-groups      = [ "dev" ]
-package             = false
+default-groups      = []
+package             = true
 
-[tool.uv.workspace]
-members = [
-    "src/packages/*",
-]
-exclude = []
+# [tool.uv.sources]
+# Pin git or path dependencies here, e.g.
+# my-lib = { git = "https://github.com/org/my-lib", tag = "v1.2.3" }
+
+[tool.hatch.build.targets.wheel]
+packages        = [ "src/touchstone_testreport" ]
+
+[build-system]
+requires        = [ "hatchling" ]
+build-backend   = "hatchling.build"
