@@ -1,10 +1,12 @@
 from csv import DictReader
 from pathlib import Path
-from typing import Annotated, Self
+from typing import Annotated
 
 from pydantic import ValidationError
 from pydantic.fields import Field
 from pydantic.types import StringConstraints
+# For Python backward compatibility (3.11 and below)
+from typing_extensions import Self
 
 from touchstone_testreport.models._base import BaseTestEntityModel, TestCaseResult
 from touchstone_testreport.models._test_case import TestCaseModel
