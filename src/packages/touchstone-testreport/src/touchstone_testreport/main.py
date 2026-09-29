@@ -8,11 +8,24 @@ from touchstone_testreport._test_template import TouchstoneTestTemplate
 from touchstone_testreport.models import TestCaseResult, TestExecutionModel, TestSuiteModel
 
 
-def main(in_test_output_dir: str):
-    test_output_dir: Path = Path(in_test_output_dir).resolve().absolute()
+def main(argv: list[str] = None):
+    parser = argparse.ArgumentParser(
+        description="Extracts Touchstone tests diagnostics and generates HTML reports."
+    )
+
+    parser.add_argument(
+        '--test-output-dir',
+        dest='test_output_dir',
+        help="Path to the Touchstone tests execution output directory.",
+        required=True,
+    )
+
+    args = parser.parse_args(argv)
+
+    test_output_dir: Path = Path(args.test_output_dir).resolve().absolute()
 
     if not (test_output_dir.exists() and test_output_dir.is_dir()):
-        # TODO: Add logging
+        print(f'Error: {test_output_dir} does not exist or is not a directory.')
         return
 
     suites: dict[str, TestSuiteModel] = {}
@@ -116,19 +129,7 @@ def main(in_test_output_dir: str):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Extracts Touchstone tests diagnostics and generates HTML reports."
-    )
-
-    parser.add_argument(
-        '--test-output-dir',
-        dest='test_output_dir',
-        help="Path to the Touchstone tests execution output directory.",
-    )
-
-    args = parser.parse_args()
-
     try:
-        main(args.test_output_dir)
+        main()
     except Exception as error:
         print(error)
