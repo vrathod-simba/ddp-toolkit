@@ -29,7 +29,8 @@ def main(argv: list[str] = None):
         return
 
     suites: dict[str, TestSuiteModel] = {}
-    exec_info: TestExecutionModel = None
+    # Intentional empty/default object creation for non-critical details
+    exec_info: TestExecutionModel = TestExecutionModel()
     template: TouchstoneTestTemplate = TouchstoneTestTemplate(
         in_template_dir=Path(__file__).parent / 'templates',
         in_out_dir=test_output_dir / 'reports'
@@ -44,8 +45,8 @@ def main(argv: list[str] = None):
         try:
             exec_info = TestExecutionModel.from_file(file_path)
         except ValueError as error:
-            # Intentional empty/default object creation for non-critical details
-            exec_info = TestExecutionModel()
+            # TODO: Add logging
+            pass
 
         # 2. Parse '_summary.csv' files for each test suites
         test_suite: TestSuiteModel
