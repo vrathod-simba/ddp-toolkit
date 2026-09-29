@@ -1,7 +1,8 @@
 from enum import Enum, auto
-from typing import Self
 
 from pydantic import BaseModel, ConfigDict
+# For Python backward compatibility (3.11 and below)
+from typing_extensions import Self
 
 
 class TestCaseResult(Enum):
