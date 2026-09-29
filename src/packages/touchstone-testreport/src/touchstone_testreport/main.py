@@ -101,7 +101,7 @@ def generate_testreport(in_test_output_dir: Path):
                 {
                     'label'   : f'{label.capitalize()} ({file_path.suffix.upper()})',
                     'filename': file_path.name,
-                    'href'    : f'../{file_path.name}',
+                    'href'    : f'../test_output/{file_path.name}',
                 }
             )
         artifact_suites.append(artifact)
